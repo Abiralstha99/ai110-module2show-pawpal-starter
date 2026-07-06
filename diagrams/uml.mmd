@@ -1,15 +1,85 @@
 classDiagram
-    %% Replace the placeholders below with your actual classes, attributes, methods, and relationships.
-    %% Keep this file updated so it matches your final implementation.
+    %% PawPal Task Scheduling System - Class Diagram
 
-    class ClassName {
-        +type attribute
-        +method() returnType
+    class Scheduler {
+        +owner: Owner
+        +task_manager: TaskManager
+        +get_all_owner_tasks() List[Task]
+        +generate_plan(plan_date) DailyPlan
+        +sort_by_priority(tasks) List[Task]
+        +sort_by_time(tasks) List[Task]
+        +fit_within_available_time(tasks, slots) Tuple[List[Task], List[Task]]
+        +explain_plan(plan) str
+        +detect_conflicts(scheduled_tasks) List[str]
     }
 
-    class AnotherClass {
-        +type attribute
-        +method() returnType
+    class TaskManager {
+        +tasks: Dict[Task, Task]
+        +add_task(task) None
+        +remove_task(task_identifier) bool
+        +is_completed(task_id) bool
+        +get_pending_tasks() List[Task]
+        +get_time_sensitive_tasks() List[Task]
+        +get_tasks_by_priority() List[Task]
+        +get_tasks_for_owner(owner) List[Task]
     }
 
-    ClassName --> AnotherClass : relationship
+    class DailyPlan {
+        +plan_date: date
+        +scheduled_tasks: List[Task]
+        +unscheduled_tasks: List[Task]
+        +explanation: str
+        +add_scheduled_task(task) None
+        +add_unscheduled_task(task) None
+        +to_dict() dict
+    }
+
+    class Task {
+        +name: str
+        +duration_minutes: int
+        +priority: str
+        +id: str
+        +pet_id: str
+        +time_constraint: time?
+        +is_completed: bool
+        +frequency: str
+        +due_date: date
+        +next_task: Task?
+        +category: str
+        +mark_complete() None
+        +next_occurrence() Task?
+        +is_time_sensitive() bool
+        +to_dict() dict
+    }
+
+    class Owner {
+        +name: str
+        +available_hours: str
+        +preferences: dict
+        +pets: List[Pet]
+        +get_available_slots() List[dict]
+        +update_preferences(new_preferences) None
+    }
+
+    class Pet {
+        +name: str
+        +species: str
+        +age: int
+        +pet_id: str
+        +special_needs: List[str]
+        +get_care_requirements() dict
+    }
+
+    class ScheduledTask {
+    }
+
+    %% Relationships
+    Scheduler --> TaskManager : uses
+    Scheduler --> DailyPlan : creates
+    Scheduler --> ScheduledTask : checks conflicts on
+    TaskManager --> Task : manages
+    DailyPlan --> Task : scheduled_tasks
+    DailyPlan --> Task : unscheduled_tasks
+    Task --> Task : next_task
+    Owner --> Pet : owns
+    Pet --> Task : pet_id references

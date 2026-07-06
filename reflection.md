@@ -7,6 +7,32 @@
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
 
+- Set up their pet profile : Enter basic info about the owner and pet (name, species, age, any special needs)
+- Add and manage care tasks : Create tasks like "morning walk," "medication," or "grooming," each with a duration, priority level, and any time constraints (e.g., meds must happen at 8am).
+- Generate and view today's plan — With one click, produce a scheduled daily plan that fits the tasks into the owner's available time, ordered by priority, with a short explanation of why the plan looks the way it does
+
+**Building Blocks**
+
+- Owner
+  Holds info about the person using the app.
+  Attributes: name, available_hours (e.g. 8am–6pm), preferences (e.g. prefers morning walks)
+  Methods: get_available_slots(), update_preferences()
+
+- Pet
+  Holds info about the animal being cared for.
+  Attributes: name, species, age, special_needs (e.g. diabetic, senior, anxious)
+  Methods: get_care_requirements() — returns any constraints driven by the pet's profile (e.g. senior dog needs shorter, more frequent walks)
+
+- Task
+  Represents one care activity.
+  Attributes: name, duration_minutes, priority (high/medium/low), time_constraint (optional fixed time like 8am), is_completed, category (walk, feeding, meds, grooming, etc.)
+  Methods: mark_complete(), is_time_sensitive(), to_dict() (for saving/displaying)
+
+- Scheduler
+  The brain of the app — takes tasks and constraints and produces a plan.
+  Attributes: owner, pet, task_manager
+  Methods: generate_plan(), sort_by_priority(), fit_within_available_time(), explain_plan()
+
 **b. Design changes**
 
 - Did your design change during implementation?
