@@ -3,180 +3,348 @@ PawPal Task Scheduling System
 Classes for managing pet care tasks and scheduling
 """
 
-from datetime import date, time
-from typing import List, Dict, Tuple, Optional
+from datetime import date, time, timedelta
+from typing import List, Dict, Tuple, Optional, Any
+from dataclasses import dataclass, field, replace
+import uuid
 
 
 class Pet:
     """Represents a pet owned by an owner."""
 
     def __init__(self, name: str, species: str, age: int, pet_id: str, special_needs: List[str]):
-        """Initialize a Pet."""
+        """Initialize a pet with details and an empty task list."""
         self.name = name
         self.species = species
         self.age = age
         self.pet_id = pet_id
         self.special_needs = special_needs
+        self.tasks: List['Task'] = []
 
     def get_care_requirements(self) -> dict:
         """Get care requirements for this pet."""
-        pass
+        return {
+            "species": self.species,
+            "age": self.age,
+            "special_needs": list(self.special_needs),
+        }
+
+    def add_task(self, task: 'Task') -> None:
+        """Add a task for this pet."""
+        self.tasks.append(task)
+
+    def remove_task(self, task_id: str) -> bool:
+        """Remove a task for this pet by id."""
+        for i, task in enumerate(self.tasks):
+            if task.id == task_id:
+                self.tasks.pop(i)
+                return True
+        return False
+
+    def get_tasks(self) -> List['Task']:
+        """Get all tasks for this pet."""
+        return self.tasks
 
 
 class Owner:
     """Represents an owner with pets and availability."""
 
-    def __init__(self, name: str, available_hours: str, preferences: dict, pets: List[Pet]):
-        """Initialize an Owner."""
+    def __init__(self, name: str, available_hours: Tuple[time, time], preferences: dict, pets: List['Pet']):
+        """Initialize an owner with pets and availability constraints."""
         self.name = name
+        # Tuple of (start_time, end_time)
         self.available_hours = available_hours
         self.preferences = preferences
         self.pets = pets
 
     def get_available_slots(self) -> List[dict]:
         """Get available time slots for this owner."""
-        pass
+        if not self.available_hours:
+            return []
+
+        start_time, end_time = self.available_hours
+        return [{
+            "start": start_time.strftime("%H:%M"),
+            "end": end_time.strftime("%H:%M")
+        }]
 
     def update_preferences(self, new_preferences: dict) -> None:
         """Update owner's preferences."""
-        pass
+        self.preferences.update(new_preferences)
 
 
+@dataclass
 class Task:
-    """Represents a pet care task."""
+    """Represents one pet care activity that may be scheduled."""
 
-    def __init__(self, name: str, duration_minutes: int, priority: str, task_id: str,
-                 pet_id: str, time_constraint: Optional[time], frequency: str,
-                 due_date: date, category: str):
-        """Initialize a Task."""
-        self.name = name
-        self.duration_minutes = duration_minutes
-        self.priority = priority
-        self.id = task_id
-        self.pet_id = pet_id
-        self.time_constraint = time_constraint
-        self.is_completed = False
-        self.frequency = frequency
-        self.due_date = due_date
-        self.next_task = None
-        self.category = category
+    name: str
+    duration_minutes: int
+    priority: str
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    pet_id: str = ""
+    time_constraint: Optional[time] = None
+    is_completed: bool = False
+    frequency: str = "once"
+    due_date: date = field(default_factory=date.today)
+    next_task: Optional['Task'] = None
+    category: str = "general"
 
     def mark_complete(self) -> None:
         """Mark this task as completed."""
-        pass
+        self.is_completed = True
+        self.next_task = self.next_occurrence()
 
     def next_occurrence(self) -> Optional['Task']:
-        """Get the next occurrence of this task."""
-        pass
+        """Return next recurring task, or None for one-time tasks."""
+        if self.frequency == "once":
+            return None
+
+        days_to_add = 1 if self.frequency == "daily" else 7 if self.frequency == "weekly" else None
+        if days_to_add is None:
+            return None
+
+        return replace(
+            self,
+            is_completed=False,
+            due_date=date.today() + timedelta(days=days_to_add),
+            next_task=None,
+        )
 
     def is_time_sensitive(self) -> bool:
-        """Check if this task has time constraints."""
-        pass
+        """Return True if this task has a fixed or narrow time requirement."""
+        return self.time_constraint is not None
 
-    def to_dict(self) -> dict:
-        """Convert task to dictionary."""
-        pass
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a dictionary representation of this task."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "duration_minutes": self.duration_minutes,
+            "priority": self.priority,
+            "pet_id": self.pet_id,
+            "time_constraint": self.time_constraint.isoformat() if self.time_constraint else None,
+            "is_completed": self.is_completed,
+            "frequency": self.frequency,
+            "due_date": self.due_date.isoformat(),
+            "category": self.category,
+        }
 
 
 class TaskManager:
-    """Manages a collection of tasks."""
+    """Manages task creation, updates, filtering, and retrieval."""
 
-    def __init__(self):
-        """Initialize the TaskManager."""
-        self.tasks = {}
+    def __init__(self, tasks: Optional[List[Task]] = None) -> None:
+        """Initialize the task manager and optionally populate with existing tasks."""
+        self.tasks: Dict[str, Task] = {}
+        if tasks:
+            for task in tasks:
+                self.tasks[task.id] = task
 
     def add_task(self, task: Task) -> None:
-        """Add a task to the manager."""
-        pass
+        """Add a new task to the manager."""
+        self.tasks[task.id] = task
 
     def remove_task(self, task_identifier: str) -> bool:
-        """Remove a task from the manager."""
-        pass
+        """Remove a task by id first, then by name if id is not found."""
+        if self.tasks.pop(task_identifier, None) is not None:
+            return True
+
+        for task_id, task in list(self.tasks.items()):
+            if task.name == task_identifier:
+                del self.tasks[task_id]
+                return True
+
+        return False
 
     def is_completed(self, task_id: str) -> bool:
-        """Check if a task is completed."""
-        pass
+        """Check if a specific task is completed."""
+        task = self.tasks.get(task_id)
+        return task.is_completed if task else False
 
     def get_pending_tasks(self) -> List[Task]:
-        """Get all pending (incomplete) tasks."""
-        pass
+        """Return all tasks not yet marked completed."""
+        return [task for task in self.tasks.values() if not task.is_completed]
+
+    def get_tasks_by_priority(self, priority: str) -> List[Task]:
+        """Return tasks that match a given priority level."""
+        normalized = priority.strip().lower()
+        return [task for task in self.tasks.values() if task.priority.strip().lower() == normalized]
 
     def get_time_sensitive_tasks(self) -> List[Task]:
-        """Get all time-sensitive tasks."""
-        pass
-
-    def get_tasks_by_priority(self) -> List[Task]:
-        """Get tasks sorted by priority."""
-        pass
+        """Return tasks that should be prioritized due to time constraints."""
+        return [task for task in self.tasks.values() if task.is_time_sensitive()]
 
     def get_tasks_for_owner(self, owner: Owner) -> List[Task]:
-        """Get all tasks for a specific owner."""
-        pass
+        """Return incomplete tasks for pets owned by the given owner."""
+        owner_pet_ids = {pet.pet_id for pet in owner.pets}
+        return [
+            task
+            for task in self.tasks.values()
+            if (not task.is_completed) and task.pet_id in owner_pet_ids
+        ]
 
 
 class DailyPlan:
-    """Represents a plan for a specific day."""
+    """Represents a single day's generated schedule and explanation."""
 
-    def __init__(self, plan_date: date):
-        """Initialize a DailyPlan."""
+    def __init__(
+            self,
+            plan_date: date,
+            scheduled_tasks: Optional[List[Task]] = None,
+            unscheduled_tasks: Optional[List[Task]] = None,
+            explanation: str = "",
+    ) -> None:
+        """Initialize plan details for one day."""
         self.plan_date = plan_date
-        self.scheduled_tasks = []
-        self.unscheduled_tasks = []
-        self.explanation = ""
+        self.scheduled_tasks = scheduled_tasks or []
+        self.unscheduled_tasks = unscheduled_tasks or []
+        self.explanation = explanation
 
     def add_scheduled_task(self, task: Task) -> None:
-        """Add a task to the scheduled tasks list."""
-        pass
+        """Add a task to the scheduled list."""
+        self.scheduled_tasks.append(task)
 
     def add_unscheduled_task(self, task: Task) -> None:
-        """Add a task to the unscheduled tasks list."""
-        pass
+        """Add a task that could not be placed in the schedule."""
+        self.unscheduled_tasks.append(task)
 
-    def to_dict(self) -> dict:
-        """Convert plan to dictionary."""
-        pass
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a dictionary representation of this daily plan."""
+        return {
+            "plan_date": self.plan_date.isoformat(),
+            "scheduled_tasks": [task.to_dict() for task in self.scheduled_tasks],
+            "unscheduled_tasks": [task.to_dict() for task in self.unscheduled_tasks],
+            "explanation": self.explanation,
+        }
 
 
+@dataclass
 class ScheduledTask:
-    """Represents a scheduled task (for conflict checking)."""
-
-    def __init__(self):
-        """Initialize a ScheduledTask."""
-        pass
+    """Represents a task scheduled at a specific time."""
+    task: Task
+    start_time: time
+    end_time: time
 
 
 class Scheduler:
-    """Main scheduler that orchestrates task planning and conflict detection."""
+    """Builds a daily plan from owner and task constraints."""
 
-    def __init__(self, owner: Owner, task_manager: TaskManager):
-        """Initialize the Scheduler."""
+    def __init__(self, owner: Owner, task_manager: TaskManager) -> None:
+        """Initialize the scheduler with an owner and task manager."""
         self.owner = owner
         self.task_manager = task_manager
 
     def get_all_owner_tasks(self) -> List[Task]:
-        """Get all tasks for the owner."""
-        pass
+        """Retrieve all tasks linked to the owner's pets."""
+        return self.task_manager.get_tasks_for_owner(self.owner)
 
     def generate_plan(self, plan_date: date) -> DailyPlan:
-        """Generate a daily plan for the specified date."""
-        pass
+        """Generate a daily plan by prioritizing and fitting tasks into available time."""
+        tasks = self.get_all_owner_tasks()
+        prioritized = self.sort_by_priority(tasks)
+        ordered = self.sort_by_time(prioritized)
+        available_slots = self.owner.get_available_slots()
+        scheduled, unscheduled = self.fit_within_available_time(
+            ordered, available_slots)
+
+        plan = DailyPlan(
+            plan_date=plan_date,
+            scheduled_tasks=scheduled,
+            unscheduled_tasks=unscheduled,
+        )
+        plan.explanation = self.explain_plan(plan)
+        return plan
 
     def sort_by_priority(self, tasks: List[Task]) -> List[Task]:
-        """Sort tasks by priority."""
-        pass
+        """Return tasks sorted by priority, highest first."""
+        priority_rank = {"high": 0, "medium": 1, "low": 2}
+        return sorted(tasks, key=lambda task: priority_rank.get(task.priority.strip().lower(), 3))
 
     def sort_by_time(self, tasks: List[Task]) -> List[Task]:
-        """Sort tasks by time constraint."""
-        pass
+        """Return tasks ordered by time constraints and optimal flow."""
+        return sorted(
+            tasks,
+            key=lambda task: (
+                task.time_constraint is None,
+                task.time_constraint,
+                {"high": 0, "medium": 1, "low": 2}.get(task.priority, 3),
+            ),
+        )
 
-    def fit_within_available_time(self, tasks: List[Task], slots: List) -> Tuple[List[Task], List[Task]]:
-        """Fit tasks within available time slots."""
-        pass
+    def fit_within_available_time(
+            self,
+            tasks: List[Task],
+            available_slots: List[Dict[str, str]],
+    ) -> Tuple[List[Task], List[Task]]:
+        """Split tasks into scheduled and unscheduled based on available time."""
+        def _to_minutes(value: str) -> int:
+            hour_text, minute_text = value.split(":", 1)
+            return int(hour_text) * 60 + int(minute_text)
+
+        total_available_minutes = 0
+        for slot in available_slots:
+            start_raw = slot.get("start")
+            end_raw = slot.get("end")
+            if not start_raw or not end_raw:
+                continue
+            try:
+                start_minutes = _to_minutes(start_raw)
+                end_minutes = _to_minutes(end_raw)
+            except ValueError:
+                continue
+
+            if end_minutes > start_minutes:
+                total_available_minutes += end_minutes - start_minutes
+
+        scheduled: List[Task] = []
+        unscheduled: List[Task] = []
+        used_minutes = 0
+
+        for task in tasks:
+            if task.duration_minutes <= 0:
+                scheduled.append(task)
+                continue
+
+            if used_minutes + task.duration_minutes <= total_available_minutes:
+                scheduled.append(task)
+                used_minutes += task.duration_minutes
+            else:
+                unscheduled.append(task)
+
+        return scheduled, unscheduled
 
     def explain_plan(self, plan: DailyPlan) -> str:
-        """Generate an explanation of the daily plan."""
-        pass
+        """Generate a human-readable explanation of scheduling decisions."""
+        return (
+            f"Scheduled {len(plan.scheduled_tasks)} task(s); "
+            f"left {len(plan.unscheduled_tasks)} unscheduled due to time constraints."
+        )
 
     def detect_conflicts(self, scheduled_tasks: List[ScheduledTask]) -> List[str]:
-        """Detect conflicts in scheduled tasks."""
-        pass
+        """Return warnings describing overlapping scheduled task time windows."""
+        warnings: List[str] = []
+
+        ordered = sorted(
+            (
+                st
+                for st in scheduled_tasks
+                if st is not None and st.start_time is not None and st.end_time is not None
+            ),
+            key=lambda st: st.start_time,
+        )
+
+        for i, first in enumerate(ordered):
+            for second in ordered[i + 1:]:
+                # Since tasks are sorted by start time, later tasks cannot overlap past this point.
+                if second.start_time >= first.end_time:
+                    break
+
+                if first.start_time < second.end_time and second.start_time < first.end_time:
+                    warnings.append(
+                        "Conflict: "
+                        f"{first.task.name} ({first.start_time:%H:%M}-{first.end_time:%H:%M}) "
+                        "overlaps with "
+                        f"{second.task.name} ({second.start_time:%H:%M}-{second.end_time:%H:%M})."
+                    )
+
+        return warnings

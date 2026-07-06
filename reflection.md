@@ -52,6 +52,19 @@
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
 
+Yes, the design changed after copilot gave me some suggestions.
+
+1. Added id field to Task
+   Each task now gets a unique UUID automatically. This prevents bugs when two tasks share the same name (e.g. "walk" appearing twice). remove_task and edit_task now look up by id instead of name.
+
+2. Added ScheduledTask dataclass
+   A new dataclass that wraps a Task with a start_time and end_time. Without this, the daily plan had no way to record when each task happens — just what tasks exist.
+
+3. Changed time fields from str to datetime.time
+   available_hours in Owner and time_constraint in Task were plain strings like "8am". These are now proper datetime.time values so the scheduler can compare and calculate times without parsing strings every time.
+
+4. Changed TaskManager storage from list to dict
+   Tasks are now stored as {id: Task} instead of a flat list. This makes finding, editing, and removing a task instant (O(1)) rather than scanning the whole list every time.
 ---
 
 ## 3. AI Collaboration

@@ -53,6 +53,7 @@ Paste a sample of your app's CLI or Streamlit output here so a reader can see wh
 #   09:00 — Feeding (10 min) [priority: high]
 #   ...
 ```
+![alt text](image.png)
 
 ## 🧪 Testing PawPal+
 
