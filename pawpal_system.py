@@ -89,25 +89,32 @@ class Task:
     next_task: Optional['Task'] = None
     category: str = "general"
 
-    def mark_complete(self) -> None:
-        """Mark this task as completed."""
+    def mark_complete(self) -> Optional['Task']:
+        """Mark this task as completed and return the next occurrence when recurring."""
         self.is_completed = True
         self.next_task = self.next_occurrence()
+        return self.next_task
 
     def next_occurrence(self) -> Optional['Task']:
         """Return next recurring task, or None for one-time tasks."""
-        if self.frequency == "once":
+        frequency = self.frequency.strip().lower()
+        if frequency == "once":
             return None
 
-        days_to_add = 1 if self.frequency == "daily" else 7 if self.frequency == "weekly" else None
+        days_to_add = 1 if frequency == "daily" else 7 if frequency == "weekly" else None
         if days_to_add is None:
             return None
 
-        return replace(
-            self,
+        return Task(
+            name=self.name,
+            duration_minutes=self.duration_minutes,
+            priority=self.priority,
+            pet_id=self.pet_id,
+            time_constraint=self.time_constraint,
             is_completed=False,
+            frequency=self.frequency,
             due_date=date.today() + timedelta(days=days_to_add),
-            next_task=None,
+            category=self.category,
         )
 
     def is_time_sensitive(self) -> bool:
@@ -143,6 +150,24 @@ class TaskManager:
     def add_task(self, task: Task) -> None:
         """Add a new task to the manager."""
         self.tasks[task.id] = task
+
+    def mark_task_complete(self, task_identifier: str) -> Optional[Task]:
+        """Mark a task complete and register its next occurrence when it is recurring."""
+        task = self.tasks.get(task_identifier)
+        if task is None:
+            for candidate in self.tasks.values():
+                if candidate.name == task_identifier:
+                    task = candidate
+                    break
+
+        if task is None:
+            return None
+
+        next_task = task.mark_complete()
+        if next_task is not None:
+            self.add_task(next_task)
+
+        return next_task
 
     def remove_task(self, task_identifier: str) -> bool:
         """Remove a task by id first, then by name if id is not found."""
@@ -182,6 +207,38 @@ class TaskManager:
             for task in self.tasks.values()
             if (not task.is_completed) and task.pet_id in owner_pet_ids
         ]
+
+    def filter_tasks(
+            self,
+            is_completed: Optional[bool] = None,
+            pet_name: Optional[str] = None,
+            owner: Optional[Owner] = None,
+    ) -> List[Task]:
+        """Filter tasks by completion status and/or the name of the pet they belong to."""
+        filtered_tasks = list(self.tasks.values())
+
+        if is_completed is not None:
+            filtered_tasks = [
+                task for task in filtered_tasks if task.is_completed == is_completed
+            ]
+
+        if pet_name is not None:
+            if owner is None:
+                raise ValueError(
+                    "owner is required when filtering tasks by pet_name")
+
+            pet_name_lookup = {
+                pet.pet_id: pet.name.strip().lower()
+                for pet in owner.pets
+            }
+            normalized_pet_name = pet_name.strip().lower()
+            filtered_tasks = [
+                task
+                for task in filtered_tasks
+                if pet_name_lookup.get(task.pet_id) == normalized_pet_name
+            ]
+
+        return filtered_tasks
 
 
 class DailyPlan:
@@ -266,8 +323,10 @@ class Scheduler:
             tasks,
             key=lambda task: (
                 task.time_constraint is None,
-                task.time_constraint,
-                {"high": 0, "medium": 1, "low": 2}.get(task.priority, 3),
+                task.time_constraint.strftime(
+                    "%H:%M") if task.time_constraint else "99:99",
+                {"high": 0, "medium": 1, "low": 2}.get(
+                    task.priority.strip().lower(), 3),
             ),
         )
 

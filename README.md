@@ -53,6 +53,7 @@ Paste a sample of your app's CLI or Streamlit output here so a reader can see wh
 #   09:00 — Feeding (10 min) [priority: high]
 #   ...
 ```
+
 ![alt text](image.png)
 
 ## 🧪 Testing PawPal+
@@ -73,14 +74,16 @@ Sample test output:
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
+The scheduling logic now lives in `pawpal_system.py` and is split across a few focused methods:
 
-| Feature | Method(s) | Notes |
-|---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Feature           | Method(s)                                                                            | Notes                                                                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Task sorting      | `Scheduler.sort_by_time()`                                                           | Sorts tasks by their `HH:MM` time constraint so earlier tasks appear first, even when the input list is out of order.                                       |
+| Filtering         | `TaskManager.filter_tasks()`                                                         | Filters tasks by completion status or by pet name, using the owner's pets to match task ownership.                                                          |
+| Conflict handling | `Scheduler.detect_conflicts()`                                                       | Checks scheduled task time windows for overlaps and returns human-readable conflict warnings.                                                               |
+| Recurring tasks   | `Task.mark_complete()`, `Task.next_occurrence()`, `TaskManager.mark_task_complete()` | Completing a `daily` or `weekly` task creates a new next-occurrence task automatically; daily tasks use `today + 1 day`, weekly tasks use `today + 7 days`. |
+
+These methods are the core of the smarter scheduling behavior used by the terminal demo and Streamlit UI.
 
 ## 📸 Demo Walkthrough
 
@@ -92,4 +95,4 @@ Describe your app in numbered steps so a reader can follow along without watchin
 4. <!-- Describe this step -->
 5. <!-- Add more steps as needed -->
 
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+**Screenshot or video** _(optional)_: <!-- Insert a screenshot or link to a demo video here -->

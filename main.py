@@ -3,7 +3,7 @@ Main script to demonstrate the PawPal Task Scheduling System
 Creates an owner with pets and tasks, then displays today's schedule
 """
 
-from datetime import date, time, timedelta
+from datetime import date, time
 from pawpal_system import Pet, Owner, Task, TaskManager, Scheduler, DailyPlan
 
 
@@ -128,10 +128,41 @@ def main():
     task_manager.add_task(task4)
     print(f"  ✓ Added {4} tasks to manager")
 
+    print("\n♻️  Verifying recurring completion for a daily task...")
+    next_task = task_manager.mark_task_complete(task1.id)
+    if next_task is not None:
+        print(
+            f"  ✓ {task1.name} completed; next occurrence due {next_task.due_date.isoformat()}"
+        )
+    else:
+        print(f"  ✗ No recurring task created for {task1.name}")
+
     # Create Scheduler
     print("\n⚙️  Initializing Scheduler...")
     scheduler = Scheduler(owner, task_manager)
     print("  ✓ Scheduler ready")
+
+    # Add the tasks out of time order so we can verify sorting works.
+    print("\n🔀 Verifying sort_by_time() with out-of-order input...")
+    out_of_order_tasks = [task4, task1, task3, task2,
+                          next_task] if next_task else [task4, task1, task3, task2]
+    sorted_by_time = scheduler.sort_by_time(out_of_order_tasks)
+    for task in sorted_by_time:
+        print(
+            f"  • {task.time_constraint.strftime('%H:%M')} | {task.name} | {task.priority}"
+        )
+
+    print("\n🔎 Filtering incomplete tasks for Buddy...")
+    incomplete_tasks = task_manager.filter_tasks(is_completed=False)
+    buddy_tasks = task_manager.filter_tasks(pet_name="Buddy", owner=owner)
+
+    print("  Incomplete tasks:")
+    for task in incomplete_tasks:
+        print(f"  • {task.name} | completed={task.is_completed}")
+
+    print("  Buddy tasks:")
+    for task in buddy_tasks:
+        print(f"  • {task.name} | pet_id={task.pet_id}")
 
     # Display Today's Schedule
     print("\n" + "=" * 60)
@@ -144,9 +175,8 @@ def main():
         f"Available: {owner.available_hours[0].strftime('%I:%M %p')} - {owner.available_hours[1].strftime('%I:%M %p')}\n")
 
     # Display tasks by time
-    tasks = [task1, task2, task3, task4]
-    tasks_sorted = sorted(
-        tasks, key=lambda t: t.time_constraint if t.time_constraint else time.max)
+    tasks = list(task_manager.tasks.values())
+    tasks_sorted = scheduler.sort_by_time(tasks)
 
     print("📋 Tasks by Time:")
     print("-" * 60)
@@ -162,6 +192,18 @@ def main():
         print(
             f"             | Duration: {task.duration_minutes} min | Category: {task.category}")
         print()
+
+    print("📋 Incomplete Tasks (filtered):")
+    print("-" * 60)
+    for task in task_manager.filter_tasks(is_completed=False):
+        pet_name = next(
+            (p.name for p in owner.pets if p.pet_id == task.pet_id), "Unknown")
+        print(f"  • {task.name:20} ({pet_name}) | completed={task.is_completed}")
+
+    print("\n📋 Tasks for Buddy (filtered):")
+    print("-" * 60)
+    for task in task_manager.filter_tasks(pet_name="Buddy", owner=owner):
+        print(f"  • {task.name:20} | pet_id={task.pet_id}")
 
     print("=" * 60)
     print("Legend: 🔴 High Priority | 🟡 Medium Priority | 🟢 Low Priority")

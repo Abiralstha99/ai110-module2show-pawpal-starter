@@ -47,24 +47,24 @@
 - What constraints does your scheduler consider (for example: time, priority, preferences)?
 - How did you decide which constraints mattered most?
 
+My scheduler considers three constraints:
+
+Time — tasks with a fixed time are placed first because they cannot move
+Priority — high priority tasks are scheduled before medium and low priority ones
+Owner availability — tasks only get scheduled within the owner's available hours (e.g. 8am to 6pm)
+
+I decided time constraints mattered most because missing a fixed-time task (like insulin) has real consequences. Priority comes second because it reflects the owner's own judgement about what matters. Availability comes last because it is more of a hard outer boundary than a sorting rule.
+
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
 
-Yes, the design changed after copilot gave me some suggestions.
+Original: A simple nested loop that compares every possible pair of tasks. Very easy to read and reason about, but it is fully pairwise — every task is compared to every other task, giving O(n²) complexity.
 
-1. Added id field to Task
-   Each task now gets a unique UUID automatically. This prevents bugs when two tasks share the same name (e.g. "walk" appearing twice). remove_task and edit_task now look up by id instead of name.
+Revised: First, sort tasks by start time. Then, when comparing them, stop checking as soon as you know they can’t overlap anymore. It also safely skips tasks with missing times instead of crashing. Slightly more complex to read, but gives better performance
 
-2. Added ScheduledTask dataclass
-   A new dataclass that wraps a Task with a start_time and end_time. Without this, the daily plan had no way to record when each task happens — just what tasks exist.
-
-3. Changed time fields from str to datetime.time
-   available_hours in Owner and time_constraint in Task were plain strings like "8am". These are now proper datetime.time values so the scheduler can compare and calculate times without parsing strings every time.
-
-4. Changed TaskManager storage from list to dict
-   Tasks are now stored as {id: Task} instead of a flat list. This makes finding, editing, and removing a task instant (O(1)) rather than scanning the whole list every time.
+For a small pet care app with fewer than 20 tasks, both versions run instantly, so speed doesn’t really matter. The new version was chosen not because it’s faster, but because it prevents crashes (like when time is missing) and avoids using exceptions in important parts of the code.
 ---
 
 ## 3. AI Collaboration

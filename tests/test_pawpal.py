@@ -2,9 +2,8 @@
 Simple tests for PawPal Task Scheduling System
 """
 
-import pytest
-from datetime import date, time
-from pawpal_system import Task, Pet, Owner
+from datetime import date, time, timedelta
+from pawpal_system import Task, Pet, Owner, TaskManager
 
 
 class TestTaskCompletion:
@@ -29,6 +28,46 @@ class TestTaskCompletion:
 
         # Assert: Task should now be completed
         assert task.is_completed is True, "Task should be marked as completed after calling mark_complete()"
+
+    def test_daily_task_creates_next_occurrence_when_completed(self):
+        """Verify that a daily task returns a new task for tomorrow when completed."""
+        task = Task(
+            name="Feed Cat",
+            duration_minutes=10,
+            priority="high",
+            pet_id="pet_001",
+            frequency="daily",
+            due_date=date.today(),
+        )
+
+        next_task = task.mark_complete()
+
+        assert task.is_completed is True
+        assert next_task is not None, "Daily tasks should create a next occurrence"
+        assert next_task is not task, "The next occurrence should be a new Task instance"
+        assert next_task.frequency == "daily"
+        assert next_task.is_completed is False
+        assert next_task.due_date == date.today() + timedelta(days=1)
+
+    def test_weekly_task_manager_registers_next_occurrence(self):
+        """Verify that TaskManager stores the next weekly occurrence after completion."""
+        task_manager = TaskManager()
+        task = Task(
+            name="Groom Dog",
+            duration_minutes=30,
+            priority="medium",
+            pet_id="pet_001",
+            frequency="weekly",
+            due_date=date.today(),
+        )
+        task_manager.add_task(task)
+
+        next_task = task_manager.mark_task_complete(task.id)
+
+        assert task.is_completed is True
+        assert next_task is not None, "Weekly tasks should create a next occurrence"
+        assert next_task.due_date == date.today() + timedelta(days=7)
+        assert next_task.id in task_manager.tasks, "The new recurring task should be stored in the manager"
 
 
 class TestTaskAddition:
