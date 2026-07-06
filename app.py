@@ -57,7 +57,8 @@ def _task_rows(tasks, include_time=True):
             "Completed": "Yes" if task.is_completed else "No",
         }
         if include_time:
-            row["Time"] = task.time_constraint.strftime("%H:%M") if task.time_constraint else ""
+            row["Time"] = task.time_constraint.strftime(
+                "%H:%M") if task.time_constraint else ""
         rows.append(row)
     return rows
 
@@ -74,6 +75,7 @@ def _as_scheduled_task(task):
         end_time=time(end_minutes // 60, end_minutes % 60),
     )
 
+
 st.subheader("Owner and Pet Setup")
 owner_name = st.text_input("Owner name", value="Jordan")
 owner_start = st.time_input("Available start", value=time(9, 0))
@@ -85,7 +87,8 @@ if "pets" not in st.session_state:
 pet_name = st.text_input("Pet name", value="Mochi")
 species = st.selectbox("Species", ["dog", "cat", "other"])
 pet_age = st.number_input("Pet age", min_value=0, max_value=40, value=3)
-special_needs = st.text_input("Special needs", value="", help="Separate multiple items with commas")
+special_needs = st.text_input(
+    "Special needs", value="", help="Separate multiple items with commas")
 
 pet_col1, pet_col2 = st.columns([1, 2])
 with pet_col1:
@@ -98,7 +101,8 @@ if add_pet:
         species=species,
         age=int(pet_age),
         pet_id=pet_id,
-        special_needs=[item.strip() for item in special_needs.split(",") if item.strip()],
+        special_needs=[item.strip()
+                       for item in special_needs.split(",") if item.strip()],
     )
     st.session_state.pets.append(pet)
     st.success(f"Added {pet.name} to the owner profile.")
@@ -128,7 +132,8 @@ if st.session_state.pets and st.session_state.tasks:
     )
     preview_scheduler = Scheduler(preview_owner, st.session_state.task_manager)
     sorted_tasks = preview_scheduler.sort_by_time(list(st.session_state.tasks))
-    incomplete_tasks = preview_scheduler.task_manager.filter_tasks(is_completed=False)
+    incomplete_tasks = preview_scheduler.task_manager.filter_tasks(
+        is_completed=False)
     conflict_warnings = preview_scheduler.detect_conflicts(
         [
             scheduled_task
@@ -158,8 +163,10 @@ if "task_manager" not in st.session_state:
     st.session_state.task_manager = TaskManager()
 
 if st.session_state.pets:
-    pet_options = {f"{pet.name} ({pet.pet_id})": pet.pet_id for pet in st.session_state.pets}
-    selected_pet_label = st.selectbox("Assign task to", list(pet_options.keys()))
+    pet_options = {
+        f"{pet.name} ({pet.pet_id})": pet.pet_id for pet in st.session_state.pets}
+    selected_pet_label = st.selectbox(
+        "Assign task to", list(pet_options.keys()))
 else:
     pet_options = {}
     selected_pet_label = None
@@ -207,7 +214,8 @@ else:
 st.divider()
 
 st.subheader("Build Schedule")
-st.caption("This button now calls Scheduler.generate_plan() and renders the resulting DailyPlan.")
+st.caption(
+    "This button now calls Scheduler.generate_plan() and renders the resulting DailyPlan.")
 
 if st.button("Generate schedule"):
     if not st.session_state.pets:
@@ -243,7 +251,8 @@ if st.button("Generate schedule"):
 
         if plan.unscheduled_tasks:
             st.markdown("#### Unscheduled tasks")
-            st.warning("Some tasks did not fit within the selected availability window.")
+            st.warning(
+                "Some tasks did not fit within the selected availability window.")
             st.table(_task_rows(plan.unscheduled_tasks))
 
         if plan_conflicts:
