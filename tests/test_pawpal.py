@@ -3,7 +3,7 @@ Simple tests for PawPal Task Scheduling System
 """
 
 from datetime import date, time, timedelta
-from pawpal_system import Task, Pet, Owner, TaskManager
+from pawpal_system import ScheduledTask, Scheduler, Task, Pet, Owner, TaskManager
 
 
 class TestTaskCompletion:
@@ -106,3 +106,75 @@ class TestTaskAddition:
             1, "Task count should increase by 1 after adding a task"
         assert final_count == 1, "Pet should now have 1 task"
         assert pet.tasks[0] == task, "The added task should be retrievable from the pet's tasks"
+
+
+class TestSchedulerBehavior:
+    """Test suite for scheduler ordering and conflict handling."""
+
+    def test_sort_by_time_returns_tasks_in_chronological_order(self):
+        """Verify that tasks with time constraints are ordered from earliest to latest."""
+        owner = Owner(
+            name="Alex",
+            available_hours=(time(8, 0), time(18, 0)),
+            preferences={},
+            pets=[],
+        )
+        scheduler = Scheduler(owner, TaskManager())
+
+        late_task = Task(
+            name="Evening Check-in",
+            duration_minutes=15,
+            priority="medium",
+            pet_id="pet_001",
+            time_constraint=time(18, 0),
+        )
+        morning_task = Task(
+            name="Morning Walk",
+            duration_minutes=30,
+            priority="high",
+            pet_id="pet_001",
+            time_constraint=time(9, 0),
+        )
+        midday_task = Task(
+            name="Lunch Meds",
+            duration_minutes=10,
+            priority="low",
+            pet_id="pet_001",
+            time_constraint=time(12, 0),
+        )
+
+        ordered_tasks = scheduler.sort_by_time(
+            [late_task, morning_task, midday_task])
+
+        assert ordered_tasks == [morning_task, midday_task, late_task]
+
+    def test_detect_conflicts_flags_duplicate_times(self):
+        """Verify that the scheduler warns when two scheduled tasks overlap."""
+        owner = Owner(
+            name="Alex",
+            available_hours=(time(8, 0), time(18, 0)),
+            preferences={},
+            pets=[],
+        )
+        scheduler = Scheduler(owner, TaskManager())
+
+        first_task = Task(
+            name="Morning Walk",
+            duration_minutes=30,
+            priority="high",
+            pet_id="pet_001",
+        )
+        second_task = Task(
+            name="Duplicate Time Grooming",
+            duration_minutes=30,
+            priority="medium",
+            pet_id="pet_001",
+        )
+
+        conflicts = scheduler.detect_conflicts([
+            ScheduledTask(first_task, time(10, 0), time(10, 30)),
+            ScheduledTask(second_task, time(10, 0), time(10, 30)),
+        ])
+
+        assert len(conflicts) == 1
+        assert "Conflict:" in conflicts[0]

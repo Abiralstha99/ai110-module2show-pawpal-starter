@@ -67,6 +67,8 @@ pytest --cov
 ```
 
 Sample test output:
+Confidence Level: 5/5 stars
+![alt text](image-1.png)
 
 ```
 # Paste your pytest output here
