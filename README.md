@@ -91,10 +91,29 @@ These methods are the core of the smarter scheduling behavior used by the termin
 
 Describe your app in numbered steps so a reader can follow along without watching a video:
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+Use this quick flow to demonstrate the full scheduling pipeline:
+
+1. Enter owner name and available hours (example: `09:00-12:00, 13:00-17:00`).
+2. Add one or more pets.
+3. Add several tasks with different priorities and durations.
+4. Optionally add fixed-time tasks by setting `time_constraint` in backend task objects.
+5. Click **Generate Plan**.
+
+Expected demo outcomes:
+
+- A scheduled-task table appears with Task, Pet, Time, Duration, and Priority.
+- If overlaps are detected in scheduled windows, warning banners are shown.
+- If no overlaps are detected, a success message confirms conflict-free scheduling.
+- Tasks that cannot fit into available time appear under the Unscheduled Tasks expander.
+
+Suggested demo dataset:
+
+- Pets: `Mochi (dog)`, `Nori (cat)`
+- Tasks:
+  - `Morning walk` (30 min, high)
+  - `Feed breakfast` (10 min, high)
+  - `Medication` (5 min, high)
+  - `Training` (45 min, medium)
+  - `Playtime` (25 min, low)
 
 **Screenshot or video** _(optional)_: <!-- Insert a screenshot or link to a demo video here -->
